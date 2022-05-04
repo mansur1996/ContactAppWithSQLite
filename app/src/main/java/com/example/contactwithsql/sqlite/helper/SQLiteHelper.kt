@@ -6,113 +6,189 @@ import android.content.Context
 import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
-import com.example.contactwithsql.sqlite.model.Contact
+import com.example.contactwithsql.sqlite.model.Customer
+import com.example.contactwithsql.sqlite.model.Employee
+import com.example.contactwithsql.sqlite.model.Order
 
 class SQLiteHelper(context: Context) :
-    SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
+    SQLiteOpenHelper(
+        context,
+        DATABASE_NAME,
+        null,
+        DATABASE_VERSION), DatabaseService {
 
     companion object {
-        private const val DATABASE_NAME = "myContact.db"
+        private const val DATABASE_NAME = "order.db"
         private const val DATABASE_VERSION = 1
-        private const val TABLE_NAME = "contact"
-        private const val ID = "id"
-        private const val NAME = "name"
-        private const val PHONE_NUMBER = "phone_number"
+
+        private const val CUSTOMER_TABLE = "customer"
+        private const val CUSTOMER_ID = "id"
+        private const val CUSTOMER_NAME = "name"
+        private const val ADDRESS = "address"
+        private const val POSTAL_CODE = "postal_code"
+        private const val COUNTRY = "country"
+
+        private const val EMPLOYEE_TABLE = "employees"
+        private const val EMPLOYEE_ID = "id"
+        private const val EMPLOYEE_NAME = "name"
+
+        private const val ORDERS_TABLE = "orders"
+        private const val ORDER_ID = "id"
+        private const val CUSTOMER_ORDER_ID = "customer_id"
+        private const val EMPLOYEE_ORDER_ID = "employee_id"
+        private const val ORDER_DATE = "order_date"
+
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
-        val createTableContact = ("CREATE TABLE " + TABLE_NAME + "("
-                + ID + " INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, " + NAME + " TEXT NOT NULL, "
-                + PHONE_NUMBER + " TEXT NOT NULL )")
-        db?.execSQL(createTableContact)
+        val customerTableQuery = "CREATE TABLE $CUSTOMER_TABLE ($CUSTOMER_ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, $CUSTOMER_NAME TEXT NOT NULL, $ADDRESS TEXT NOT NULL, $POSTAL_CODE TEXT NOT NULL, $COUNTRY TEXT NOT NULL)"
+        val employeeTableQuery = "CREATE TABLE $EMPLOYEE_TABLE ($EMPLOYEE_ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, $EMPLOYEE_NAME TEXT NOT NULL)"
+        val ordersTableQuery = "CREATE TABLE $ORDERS_TABLE ($ORDER_ID INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT, $CUSTOMER_ORDER_ID INTEGER NOT NULL, $EMPLOYEE_ORDER_ID INTEGER NOT NULL, $ORDER_DATE TEXT NOT NULL, FOREIGN KEY($CUSTOMER_ORDER_ID) REFERENCES $CUSTOMER_TABLE ($CUSTOMER_ID), FOREIGN KEY($EMPLOYEE_ORDER_ID) REFERENCES $EMPLOYEE_TABLE ($EMPLOYEE_ID))"
+        db?.execSQL(customerTableQuery)
+        db?.execSQL(employeeTableQuery)
+        db?.execSQL(ordersTableQuery)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
-        db!!.execSQL("DROP TABLE IF EXISTS $TABLE_NAME")
-        onCreate(db)
+
     }
 
-    fun addContact(contact: Contact): Long {
-        val db = this.writableDatabase
-
-        val contentValue = ContentValues()
-        contentValue.put(NAME, contact.name)
-        contentValue.put(PHONE_NUMBER, contact.phoneNumber)
-
-        val success = db.insert(TABLE_NAME, null, contentValue)
-        db.close()
-        return success
-    }
-
-    fun deleteContact(contact: Contact) {
-        val db = this.writableDatabase
-        db.delete(TABLE_NAME, "$ID = ?", arrayOf("${contact.id}"))
-        db.close()
-    }
-
-    fun updateContact(contact: Contact): Int {
-        val db = writableDatabase
-
+    override fun insertCustomer(customer: Customer) {
+        val database = this.writableDatabase
         val contentValues = ContentValues()
-        contentValues.put(ID, contact.id)
-        contentValues.put(NAME, contact.name)
-        contentValues.put(PHONE_NUMBER, contact.phoneNumber)
 
-        val success = db.update(
-            TABLE_NAME,
-            contentValues,
-            "$ID = ?",
-            arrayOf(contact.id.toString())
-        )
-        db.close()
-        return success
+        contentValues.put(CUSTOMER_NAME, customer.name)
+        contentValues.put(ADDRESS, customer.address)
+        contentValues.put(POSTAL_CODE, customer.postalCode)
+        contentValues.put(COUNTRY, customer.country)
+
+        database.insert(CUSTOMER_TABLE, null, contentValues)
+        database.close()
     }
 
-    fun getContactById(id: Int): Contact {
-        val db = readableDatabase
-        val cursor = db.query(
-            TABLE_NAME,
-            arrayOf(ID, NAME, PHONE_NUMBER),
-            "$ID = ?",
+    override fun insertEmployee(employee: Employee) {
+        val database = this.writableDatabase
+        val contentValues = ContentValues()
+
+        contentValues.put(EMPLOYEE_NAME, employee.name)
+
+        database.insert(EMPLOYEE_TABLE, null, contentValues)
+        database.close()
+    }
+
+    override fun insertOrder(order: Order) {
+        val database = this.writableDatabase
+        val contentValues = ContentValues()
+
+        contentValues.put(CUSTOMER_ORDER_ID, order.customer?.id)
+        contentValues.put(EMPLOYEE_ORDER_ID, order.employee?.id)
+        contentValues.put(ORDER_DATE, order.orderDate)
+
+        database.insert(ORDERS_TABLE, null, contentValues)
+        database.close()
+    }
+
+    override fun getAllCustomers(): List<Customer> {
+        val list = ArrayList<Customer>()
+        val query = "select * from $CUSTOMER_TABLE"
+        val database = this.readableDatabase
+        val cursor = database.rawQuery(query, null)
+
+        if(cursor.moveToFirst()){
+            do {
+                val customer = Customer()
+                customer.id = cursor.getInt(0)
+                customer.name = cursor.getString(1)
+                customer.address = cursor.getString(2)
+                customer.postalCode = cursor.getString(3)
+                customer.country = cursor.getString(4)
+                list.add(customer)
+            }while (cursor.moveToNext())
+        }
+        return list
+    }
+
+    override fun getAllEmployees(): List<Employee> {
+        val list = ArrayList<Employee>()
+        val query = "select * from $EMPLOYEE_TABLE"
+        val database = this.readableDatabase
+        val cursor = database.rawQuery(query, null)
+
+        if(cursor.moveToFirst()){
+            do {
+                val employee = Employee()
+                employee.id = cursor.getInt(0)
+                employee.name = cursor.getString(1)
+                list.add(employee)
+            }while (cursor.moveToNext())
+        }
+        return list
+    }
+
+    override fun getAllOrders(): ArrayList<Order> {
+        val list = ArrayList<Order>()
+        val query = "select * from $ORDERS_TABLE"
+        val database = this.readableDatabase
+        val cursor = database.rawQuery(query, null)
+
+        if(cursor.moveToFirst()){
+            do {
+                val order = Order()
+                order.id = cursor.getInt(0)
+                order.customer = getCustomerById(cursor.getInt(1))
+                order.employee = getEmployeeById(cursor.getInt(2))
+                order.orderDate = cursor.getString(3)
+                list.add(order)
+            }while (cursor.moveToNext())
+        }
+        return list
+    }
+
+    override fun getCustomerById(id: Int): Customer {
+        val database = this.readableDatabase
+        val cursor = database.query(
+            CUSTOMER_TABLE,
+            arrayOf(CUSTOMER_ID,
+                CUSTOMER_NAME,
+                ADDRESS,
+                POSTAL_CODE,
+                COUNTRY),
+            "$CUSTOMER_ID = ?",
             arrayOf(id.toString()),
-            null, null, null
+        null,
+        null,
+        null
         )
         cursor?.moveToFirst()
-        return Contact(cursor.getInt(0), cursor.getString(1), cursor.getString(2))
+        val customer = Customer()
+        customer.id = cursor.getInt(0)
+        customer.name = cursor.getString(1)
+        customer.address = cursor.getString(2)
+        customer.postalCode = cursor.getString(3)
+        customer.country = cursor.getString(4)
+
+        return customer
     }
 
-    @SuppressLint("Range")
-    fun getAllContacts(): ArrayList<Contact> {
-        val contactList: ArrayList<Contact> = ArrayList()
-        val selectQuery = "SELECT * FROM $TABLE_NAME"
-        val db = this.readableDatabase
+    override fun getEmployeeById(id: Int): Employee {
+        val database = this.readableDatabase
+        val cursor = database.query(
+            EMPLOYEE_TABLE,
+            arrayOf(
+                EMPLOYEE_ID,
+                EMPLOYEE_NAME),
+            "$EMPLOYEE_ID = ?",
+            arrayOf(id.toString()),
+            null,
+            null,
+            null
+        )
+        cursor?.moveToFirst()
+        val employee = Employee()
+        employee.id = cursor.getInt(0)
+        employee.name = cursor.getString(1)
 
-        val cursor: Cursor?
-
-        try {
-            cursor = db.rawQuery(selectQuery, null)
-        } catch (e: Exception) {
-            e.printStackTrace()
-            db.execSQL(selectQuery)
-            return ArrayList()
-        }
-
-        var id: Int
-        var name: String
-        var phoneNumber: String
-
-        if (cursor.moveToFirst()) {
-            do {
-                id = cursor.getInt(cursor.getColumnIndex("id"))
-                name = cursor.getString(cursor.getColumnIndex("name"))
-                phoneNumber = cursor.getString(cursor.getColumnIndex("phone_number"))
-
-
-                val contact = Contact(id = id, name = name, phoneNumber = phoneNumber)
-                contactList.add(contact)
-            } while (cursor.moveToNext())
-        }
-        return contactList
+        return employee
     }
 
 }

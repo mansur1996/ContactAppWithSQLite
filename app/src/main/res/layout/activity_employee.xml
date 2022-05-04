@@ -1,21 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:padding="40dp"
     android:orientation="vertical"
-    android:padding="20dp">
+    tools:context=".activity.EmployeeActivity">
 
     <EditText
         android:id="@+id/et_name"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:inputType="textPersonName"
-        android:hint="Name" />
+        android:hint="name"/>
 
-    <EditText
-        android:id="@+id/et_phone"
-        android:inputType="phone"
-        android:layout_width="match_parent"
+    <Button
+        android:id="@+id/btn_save"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:hint="Phone Number" />
+        android:text="Save"/>
+
 </LinearLayout>
